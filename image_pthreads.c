@@ -3,7 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <pthread.h>
-#include "image.h"
+#include "image_pthreads.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -14,13 +14,13 @@
 #define NUM_THREADS 4
 
 // A struct used to pass arguments to Convolute function
-typedef struct {
+/*typedef struct {
 	Image *srcImage;
 	Image *destImage;
 	enum KernelTypes type;
 	int threadRank;
 } ConvoluteArguments;
-
+*/
 
 //An array of kernel matrices to be used for image convolution.  
 //The indexes of these match the enumeration from the header file. ie. algorithms[BLUR] returns the kernel corresponding to a box blur.
@@ -67,8 +67,15 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
 //Parameters: srcImage: The image being convoluted
 //            destImage: A pointer to a  pre-allocated (including space for the pixel array) structure to receive the convoluted image.  It should be the same size as srcImage
 //            algorithm: The kernel matrix to use for the convolution
-//Returns: Nothing
-void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
+//Returns: void *
+void *convolute(ConvoluteArguments *argumentStruct){
+	Image *srcImage = argumentStruct->srcImage;
+	Image *destImage = argumentStruct->destImage;
+	enum KernelTypes type = argumentStruct->type;
+	Matrix algorithm;
+
+	memcpy(algorithm, algorithms[type], sizeof(Matrix));	
+
     int row,pix,bit,span;
     span=srcImage->bpp*srcImage->bpp;
     for (row=0;row<srcImage->height;row++){
@@ -78,6 +85,8 @@ void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
             }
         }
     }
+
+    return NULL;
 }
 
 //Usage: Prints usage information for the program
@@ -142,7 +151,13 @@ int main(int argc,char** argv){
 		printf("Thread %d src field: %p, dest field: %p, algorithm: %d, rank: %d\n", threadRank, argArray[threadRank].srcImage, argArray[threadRank].destImage,  argArray[threadRank].type, argArray[threadRank].threadRank);
 	}
 
-    	convolute(&srcImage,&destImage,algorithms[type]);
+
+	ConvoluteArguments testArgs;
+	testArgs.srcImage = &srcImage;
+	testArgs.destImage = &destImage;
+	testArgs.type = type;
+	testArgs.threadRank = 0;
+    	convolute(&testArgs);
     
 
 
