@@ -11,16 +11,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+// The number of threads to launch on convolute function
 #define NUM_THREADS 4
 
-// A struct used to pass arguments to Convolute function
-/*typedef struct {
-	Image *srcImage;
-	Image *destImage;
-	enum KernelTypes type;
-	int threadRank;
-} ConvoluteArguments;
-*/
 
 //An array of kernel matrices to be used for image convolution.  
 //The indexes of these match the enumeration from the header file. ie. algorithms[BLUR] returns the kernel corresponding to a box blur.
@@ -68,25 +61,28 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
 //            destImage: A pointer to a  pre-allocated (including space for the pixel array) structure to receive the convoluted image.  It should be the same size as srcImage
 //            algorithm: The kernel matrix to use for the convolution
 //Returns: void *
-void *convolute(ConvoluteArguments *argumentStruct){
+void *convolute(void *argument){
+	ConvoluteArguments *argumentStruct = (ConvoluteArguments *)argument;
+
 	Image *srcImage = argumentStruct->srcImage;
 	Image *destImage = argumentStruct->destImage;
 	enum KernelTypes type = argumentStruct->type;
 	Matrix algorithm;
 
+	// Copy algorithm matrix into algorithm variable to avoid compiler issue
 	memcpy(algorithm, algorithms[type], sizeof(Matrix));	
 
-    int row,pix,bit,span;
-    span=srcImage->bpp*srcImage->bpp;
-    for (row=0;row<srcImage->height;row++){
-        for (pix=0;pix<srcImage->width;pix++){
-            for (bit=0;bit<srcImage->bpp;bit++){
-                destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
-            }
-        }
-    }
+    	int row,pix,bit,span;
+    	span=srcImage->bpp*srcImage->bpp;
+    	for (row=0;row<srcImage->height;row++){
+        	for (pix=0;pix<srcImage->width;pix++){
+            		for (bit=0;bit<srcImage->bpp;bit++){
+                		destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
+            		}
+        	}
+    	}
 
-    return NULL;
+    	return NULL;
 }
 
 //Usage: Prints usage information for the program
@@ -148,7 +144,7 @@ int main(int argc,char** argv){
 		argArray[threadRank].type = type;
 		argArray[threadRank].threadRank = threadRank;
 
-		printf("Thread %d src field: %p, dest field: %p, algorithm: %d, rank: %d\n", threadRank, argArray[threadRank].srcImage, argArray[threadRank].destImage,  argArray[threadRank].type, argArray[threadRank].threadRank);
+		//printf("Thread %d src field: %p, dest field: %p, algorithm: %d, rank: %d\n", threadRank, argArray[threadRank].srcImage, argArray[threadRank].destImage,  argArray[threadRank].type, argArray[threadRank].threadRank);
 	}
 
 
@@ -157,7 +153,7 @@ int main(int argc,char** argv){
 	testArgs.destImage = &destImage;
 	testArgs.type = type;
 	testArgs.threadRank = 0;
-    	convolute(&testArgs);
+    	convolute((void *)&testArgs);
     
 
 

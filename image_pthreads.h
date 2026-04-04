@@ -24,7 +24,7 @@ typedef struct {
 typedef double Matrix[3][3];
 
 uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm);
-void *convolute(ConvoluteArguments *arguments);
+void *convolute(void *arguments);
 int Usage();
 enum KernelTypes GetKernelType(char* type);
 
