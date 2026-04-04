@@ -12,7 +12,7 @@
 #include "stb_image_write.h"
 
 // The number of threads to launch on convolute function
-#define NUM_THREADS 4
+#define NUM_THREADS 10
 
 
 //An array of kernel matrices to be used for image convolution.  
@@ -62,19 +62,34 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
 //            algorithm: The kernel matrix to use for the convolution
 //Returns: void *
 void *convolute(void *argument){
+	// Cast the (void *) argument to be a pointer to the ConvoluteArguments struct 
 	ConvoluteArguments *argumentStruct = (ConvoluteArguments *)argument;
 
 	Image *srcImage = argumentStruct->srcImage;
 	Image *destImage = argumentStruct->destImage;
+	int rank = argumentStruct->threadRank;
 	enum KernelTypes type = argumentStruct->type;
 	Matrix algorithm;
 
 	// Copy algorithm matrix into algorithm variable to avoid compiler issue
 	memcpy(algorithm, algorithms[type], sizeof(Matrix));	
 
-    	int row,pix,bit,span;
+	int row,pix,bit,span;
+
+	// Each process will do height/NUM_THREADS amount of rows
+	int numIterations = (srcImage->height) / NUM_THREADS;
+	int startIndex = numIterations * rank;
+	int endIndex = startIndex + numIterations;
+	
+	
+	// Distribute the overflow iterations to the last thread
+	if (rank == (NUM_THREADS - 1)) {
+		endIndex += srcImage->height % NUM_THREADS;
+	}	
+
+
     	span=srcImage->bpp*srcImage->bpp;
-    	for (row=0;row<srcImage->height;row++){
+    	for (row = startIndex; row < endIndex; row++){
         	for (pix=0;pix<srcImage->width;pix++){
             		for (bit=0;bit<srcImage->bpp;bit++){
                 		destImage->data[Index(pix,row,srcImage->width,bit,srcImage->bpp)]=getPixelValue(srcImage,pix,row,bit,algorithm);
@@ -145,25 +160,34 @@ int main(int argc,char** argv){
 		argArray[threadRank].threadRank = threadRank;
 
 		//printf("Thread %d src field: %p, dest field: %p, algorithm: %d, rank: %d\n", threadRank, argArray[threadRank].srcImage, argArray[threadRank].destImage,  argArray[threadRank].type, argArray[threadRank].threadRank);
+		
+		pthread_create(&threads[threadRank], NULL, &convolute, (void *)&argArray[threadRank]);
+	}
+
+	// Wait for all threads to exit
+	for (int threadRank = 0; threadRank < NUM_THREADS; threadRank++) {
+		pthread_join(threads[threadRank], NULL);
 	}
 
 
+	/*
 	ConvoluteArguments testArgs;
 	testArgs.srcImage = &srcImage;
 	testArgs.destImage = &destImage;
 	testArgs.type = type;
 	testArgs.threadRank = 0;
     	convolute((void *)&testArgs);
+    	*/
+
+
+
+    	// Write the new image to the output file
+    	stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
+    	stbi_image_free(srcImage.data);
     
-
-
-
-    // Write the new image to the output file
-    stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
-    stbi_image_free(srcImage.data);
-    
-    free(destImage.data);
-    t2=time(NULL);
-    printf("Took %ld seconds\n",t2-t1);
-   return 0;
+    	free(destImage.data);
+    	t2=time(NULL);
+    	printf("Took %ld seconds\n",t2-t1);
+   	
+	return 0;
 }
