@@ -64,7 +64,7 @@ void convolute(Image* srcImage,Image* destImage,Matrix algorithm){
     	int row,pix,bit,span;
     	span=srcImage->bpp*srcImage->bpp;
 
-	// Parallelize the for loop
+	// Parallelize the for loop with independent row, pix, bit variables. Block scheduling
 	# pragma omp parallel for private(row, pix, bit) schedule(static)
     	for (row=0;row<srcImage->height;row++){
         	for (pix=0;pix<srcImage->width;pix++){
@@ -118,7 +118,20 @@ int main(int argc,char** argv){
     destImage.height=srcImage.height;
     destImage.width=srcImage.width;
     destImage.data=malloc(sizeof(uint8_t)*destImage.width*destImage.bpp*destImage.height);
-    convolute(&srcImage,&destImage,algorithms[type]);
+
+
+	//struct timespec ts;
+        //clock_gettime(CLOCK_MONOTONIC, &ts);
+        //float startTime = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+    
+            convolute(&srcImage,&destImage,algorithms[type]);
+
+	//clock_gettime(CLOCK_MONOTONIC, &ts);
+        //float endTime = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+        //printf("Time elapsed: %f", endTime - startTime);
+	
+
+
     stbi_write_png("output.png",destImage.width,destImage.height,destImage.bpp,destImage.data,destImage.bpp*destImage.width);
     stbi_image_free(srcImage.data);
     

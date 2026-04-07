@@ -57,21 +57,22 @@ uint8_t getPixelValue(Image* srcImage,int x,int y,int bit,Matrix algorithm){
 }
 
 //convolute:  Applies a kernel matrix to an image
-//Parameters: srcImage: The image being convoluted
-//            destImage: A pointer to a  pre-allocated (including space for the pixel array) structure to receive the convoluted image.  It should be the same size as srcImage
-//            algorithm: The kernel matrix to use for the convolution
+//Parameters: argument: pointer to the ConvoluteArguments structure
+//
+//	
 //Returns: void *
 void *convolute(void *argument){
 	// Cast the (void *) argument to be a pointer to the ConvoluteArguments struct 
 	ConvoluteArguments *argumentStruct = (ConvoluteArguments *)argument;
 
+	// Saving the original arguments from the ConvoluteArguments structure
 	Image *srcImage = argumentStruct->srcImage;
 	Image *destImage = argumentStruct->destImage;
 	int rank = argumentStruct->threadRank;
 	enum KernelTypes type = argumentStruct->type;
 	Matrix algorithm;
 
-	// Copy algorithm matrix into algorithm variable to avoid compiler issue
+	// Copy algorithm matrix into algorithm variable
 	memcpy(algorithm, algorithms[type], sizeof(Matrix));	
 
 	int row,pix,bit,span;
@@ -79,6 +80,7 @@ void *convolute(void *argument){
 	// Each process will do height/NUM_THREADS amount of rows
 	int numIterations = (srcImage->height) / NUM_THREADS;
 	int startIndex = numIterations * rank;
+	//int endIndex = ((rank + 1) * numIterations) - 1;
 	int endIndex = startIndex + numIterations;
 	
 	
@@ -151,7 +153,11 @@ int main(int argc,char** argv){
     	pthread_t threads[NUM_THREADS];
 	ConvoluteArguments argArray[NUM_THREADS];    
 
-
+	//struct timespec ts;
+        //clock_gettime(CLOCK_MONOTONIC, &ts);
+        //float startTime = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+    
+        // Launching each thread on Convolute function 
 	for (int threadRank = 0; threadRank < NUM_THREADS; threadRank++) {
 		// Create the struct to be passed to the convolute function for this thread
 		argArray[threadRank].srcImage = &srcImage;
@@ -170,14 +176,9 @@ int main(int argc,char** argv){
 	}
 
 
-	/*
-	ConvoluteArguments testArgs;
-	testArgs.srcImage = &srcImage;
-	testArgs.destImage = &destImage;
-	testArgs.type = type;
-	testArgs.threadRank = 0;
-    	convolute((void *)&testArgs);
-    	*/
+	//clock_gettime(CLOCK_MONOTONIC, &ts);
+        //float endTime = (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+        //printf("Time elapsed: %f", endTime - startTime);
 
 
 

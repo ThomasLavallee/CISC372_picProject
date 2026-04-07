@@ -1,3 +1,8 @@
-Compile pthreads version with: make pthreads
+Pthreads and OpenMP versions found in pthreads.c and openmp.c
 
-Compile openmp version with: make openmp
+
+Compile pthreads version with:
+    make pthreads
+
+Compile openmp version with:
+    make openmp
